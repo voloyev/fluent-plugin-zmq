@@ -18,6 +18,8 @@
 #    limitations under the License.
 #
 
+require 'fluent/input'
+
 module Fluent
   class ZMQInput < Fluent::Input
     Plugin.register_input('zmq', self)
