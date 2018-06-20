@@ -30,7 +30,7 @@ module Fluent
     # config_param :server_type,     :string,  :default => 'nonblocking'
 
     def initialize
-      require 'ffi-zmq'
+      require 'ffi-rzmq'
       super
     end
 
