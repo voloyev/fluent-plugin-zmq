@@ -19,8 +19,8 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   #s.add_dependency "fluentd", [">= 0.10.58", "< 2"]
-  s.add_runtime_dependency "fluentd"
-  s.add_runtime_dependency "ffi-rzmq"
+  s.add_dependency "fluentd"
+  s.add_dependency "ffi-rzmq"
   # specify any dependencies here; for example:
   # s.add_development_dependency "rspec"
   # s.add_runtime_dependency "rest-client"
