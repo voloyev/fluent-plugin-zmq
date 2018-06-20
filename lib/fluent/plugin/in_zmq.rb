@@ -41,7 +41,7 @@ module Fluent
     def start
       $log.debug "listening http on #{@bind}:#{@port}"
       @zmq = ZMQ::Context.new
-      @server = @zmq.socket(ZMQ::UPSTREAM)
+      @server = @zmq.socket(ZMQ::STREAM)
       @server.bind("tcp://" + @bind + ":" + @port.to_s)
       @thread = Thread.new(&method(:run))
     end
