@@ -4,13 +4,13 @@
 require 'google/protobuf'
 
 Google::Protobuf::DescriptorPool.generated_pool.build do
-  add_message "tutorial.MyMessage" do
+  add_message "zeromq.TestMessage" do
     optional :tag, :string, 1
     optional :time, :string, 2
     optional :body, :string, 3
   end
 end
 
-module Tutorial
-  MyMessage = Google::Protobuf::DescriptorPool.generated_pool.lookup("tutorial.MyMessage").msgclass
+module Zeromq
+  TestMessage = Google::Protobuf::DescriptorPool.generated_pool.lookup("zeromq.TestMessage").msgclass
 end
