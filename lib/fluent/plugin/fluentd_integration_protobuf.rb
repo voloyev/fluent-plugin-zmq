@@ -9,7 +9,7 @@ module Fluent
       end
 
       def feed(message)
-        self.msg = Tutorial::MyMessage.decode(message)
+        self.msg = Zeromq::TestMessage.decode(message)
       end
 
       def read
