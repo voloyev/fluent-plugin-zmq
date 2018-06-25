@@ -1,4 +1,4 @@
-require_relative 'my_protobuf_msg_pb'
+require_relative 'my_proto_msg_pb'
 
 module Fluent
   module Plugin
