@@ -140,7 +140,7 @@ module Fluent
       message.to_a.each do |msg|
         msg = @unpacker.feed(msg)
         tag, time, record = msg.to_h.values
-        log.debug(msg)
+        log.debug(msg.inspect)
         router.emit(tag, time.to_i, Oj.load(record))
       end
     end
