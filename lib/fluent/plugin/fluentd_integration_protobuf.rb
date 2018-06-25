@@ -1,7 +1,7 @@
 require_relative 'my_proto_msg_pb'
 
 module Fluent
-  module Plugin
+  module Integration
     # add ability to decode fluentd messages
     class Protobuf
       def initialize
