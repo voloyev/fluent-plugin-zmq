@@ -30,7 +30,7 @@ module Fluent
     config_param :port,            :integer, :default => 4010
     config_param :bind,            :string,  :default => '0.0.0.0'
     config_param :body_size_limit, :size,    :default => 32*1024*1024  # TODO default
-    config_param :encription_type, :string,  :default => 'msgpack'
+    config_param :encryption_type, :string,  :default => 'msgpack'
     #config_param :server_type,     :string,  :default => 'nonblocking'
 
     def initialize
@@ -119,7 +119,7 @@ module Fluent
     end
 
     def choose_unpacker
-      case @encription_type
+      case @encryption_type
       when 'protobuf'
         Fluent::Integration::Protobuf.new
       else
@@ -128,7 +128,7 @@ module Fluent
     end
 
     def parse_msg(message)
-      case @encription_type
+      case @encryption_type
       when 'protobuf'
         protobuf_parse(message)
       else
