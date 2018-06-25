@@ -19,44 +19,44 @@
 #
 
 require 'fluent/input'
+require_relative 'fluentd_integration_protobuf'
 
 module Fluent
+  class ZMQInput < Input
+    Fluent::Plugin.register_input('zmq', self)
 
-class ZMQInput < Input
-  Fluent::Plugin.register_input('zmq', self)
+    config_param :port,            :integer, :default => 4010
+    config_param :bind,            :string,  :default => '0.0.0.0'
+    config_param :body_size_limit, :size,    :default => 32*1024*1024  # TODO default
+    config_param :encription_type, :string,  :default => 'msgpack'
+    #config_param :server_type,     :string,  :default => 'nonblocking'
 
-  config_param :port,            :integer, :default => 4010
-  config_param :bind,            :string,  :default => '0.0.0.0'
-  config_param :body_size_limit, :size,    :default => 32*1024*1024  # TODO default
-  #config_param :server_type,     :string,  :default => 'nonblocking'
+    def initialize
+      require 'cztop'
+      super
+    end
 
-  def initialize
-    require 'cztop'
-    super
-  end
+    def configure(conf)
+      super
+      @unpacker = choose_unpacker
+    end
 
-  def configure(conf)
-    super
-    @unpacker = Fluent::Engine.msgpack_factory.unpacker
-  end
+    def start
+      super
+      $log.debug "listening http on #{@bind}:#{@port}"
+      @running = true
+      @socket = CZTop::Socket::PULL.new("tcp://" + @bind + ":" + @port.to_s)
+      @thread = Thread.new(&method(:run))
+    end
 
-  def start
-    super
-    $log.debug "listening http on #{@bind}:#{@port}"
-    @running = true
-    @socket = CZTop::Socket::PULL.new("tcp://" + @bind + ":" + @port.to_s)
-    @thread = Thread.new(&method(:run))
-  end
+    def shutdown
+      @running = false
+      @thread.kill
+      @socket.close
+      super
+    end
 
-  def shutdown
-    @running = false
-    @thread.kill
-    @socket.close
-    super
-  end
-
-  def run
-    begin
+    def run
       while @running
         message = @socket.receive rescue nil
         message.to_a.each do |msg|
@@ -65,59 +65,66 @@ class ZMQInput < Input
         end
       end
     rescue
-      log.error "unexpected error", :error=>$!.to_s
+      log.error 'unexpected error', :error=>$!.to_s
       log.error_backtrace
     end
-  end
 
-  # message Entry {
-  #   1: long time
-  #   2: object record
-  # }
-  #
-  # message Forward {
-  #   1: string tag
-  #   2: list<Entry> entries
-  # }
-  #
-  # message PackedForward {
-  #   1: string tag
-  #   2: raw entries  # msgpack stream of Entry
-  # }
-  #
-  # message Message {
-  #   1: string tag
-  #   2: long? time
-  #   3: object record
-  # }
-  def on_message(msg)
-    # TODO format error
-    tag = msg[0].to_s
-    entries = msg[1]
+    # message Entry {
+    #   1: long time
+    #   2: object record
+    # }
+    #
+    # message Forward {
+    #   1: string tag
+    #   2: list<Entry> entries
+    # }
+    #
+    # message PackedForward {
+    #   1: string tag
+    #   2: raw entries  # msgpack stream of Entry
+    # }
+    #
+    # message Message {
+    #   1: string tag
+    #   2: long? time
+    #   3: object record
+    # }
+    def on_message(msg)
+      # TODO format error
+      tag = msg[0].to_s
+      entries = msg[1]
 
-    if entries.class == String
-      # PackedForward
-      es = MessagePackEventStream.new(entries)
-      router.emit_stream(tag, es)
+      if entries.class == String
+        # PackedForward
+        es = MessagePackEventStream.new(entries)
+        router.emit_stream(tag, es)
 
-    elsif entries.class == Array
-      # Forward
-      es = MultiEventStream.new
-      entries.each {|e|
-        time = e[0].to_i
-        time = (now ||= Engine.now) if time == 0
-        record = e[1]
-        es.add(time, record)
-      }
-      router.emit_stream(tag, es)
-    else
-      # Message
-      time = msg[1]
-      time = Engine.now if time == 0
-      record = msg[2]
-      router.emit(tag, time, record)
+      elsif entries.class == Array
+        # Forward
+        es = MultiEventStream.new
+        entries.each {|e|
+          time = e[0].to_i
+          time = (now ||= Engine.now) if time == 0
+          record = e[1]
+          es.add(time, record)
+        }
+        router.emit_stream(tag, es)
+      else
+        # Message
+        time = msg[1]
+        time = Engine.now if time == 0
+        record = msg[2]
+        router.emit(tag, time, record)
+      end
+    end
+
+    def choose_unpacker
+      case @encription_type
+      when 'protobuf'
+        Fluent::Integration::Protobuf.new
+      else
+        Fluent::Engine.msgpack_factory.unpacker
+      end
     end
   end
-end
-
 end
