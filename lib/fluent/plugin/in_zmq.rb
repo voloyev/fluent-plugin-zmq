@@ -19,8 +19,10 @@
 #
 
 require 'fluent/input'
+require 'oj'
 require_relative 'fluentd_integration_protobuf'
 
+require 'pry'
 module Fluent
   class ZMQInput < Input
     Fluent::Plugin.register_input('zmq', self)
@@ -39,6 +41,7 @@ module Fluent
     def configure(conf)
       super
       @unpacker = choose_unpacker
+      # binding.pry
     end
 
     def start
@@ -58,14 +61,11 @@ module Fluent
 
     def run
       while @running
-        message = @socket.receive rescue nil
-        message.to_a.each do |msg|
-          @unpacker.feed(msg)
-          on_message(@unpacker.read)
-        end
+        message = @socket.receive
+        parse_msg(message)
       end
-    rescue
-      log.error 'unexpected error', :error=>$!.to_s
+    rescue StandardError => error
+      log.error 'unexpected error', :error=>$!.to_s + error.to_s
       log.error_backtrace
     end
 
@@ -124,6 +124,31 @@ module Fluent
         Fluent::Integration::Protobuf.new
       else
         Fluent::Engine.msgpack_factory.unpacker
+      end
+    end
+
+    def parse_msg(message)
+      case @encription_type
+      when 'protobuf'
+        protobuf_parse(message)
+      else
+        msgpack_parse(message)
+      end
+    end
+
+    def protobuf_parse(message)
+      message.to_a.each do |msg|
+        msg = @unpacker.feed(msg)
+        tag, time, record = msg.to_h.values
+        log.debug(msg)
+        router.emit(tag, time.to_i, Oj.load(record))
+      end
+    end
+
+    def msgpack_parse(message)
+      message.to_a.each do |msg|
+        @unpacker.feed(msg)
+        on_message(@unpacker.read)
       end
     end
   end
